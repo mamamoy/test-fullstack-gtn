@@ -4,6 +4,8 @@ import { watch } from 'vue';
 import { reactive } from 'vue';
 import { computed } from 'vue';
 import { ref } from 'vue';
+import { jsPDF } from 'jspdf'
+import 'jspdf-autotable'
 
 const props = defineProps({
     users: Array
@@ -34,7 +36,7 @@ const filteredUsers = computed(() => {
         return props.users.users;
     } else {
         const query = searchTable.value.toLowerCase();
-        return props.users.users.filter(user => user.name.toLowerCase().includes(query) || user.NIP.includes(query) || sumCustomers(user.sales_reports).toString().includes(query));
+        return props.users.users.filter(user => user.name.toLowerCase().includes(query) || user.NIP.includes(query));
     }
 })
 // end
@@ -66,13 +68,6 @@ const openAddModal = () => {
 }
 // end
 
-const sumCustomers = (sales_reports) => {
-    if (Array.isArray(sales_reports)) {
-        return sales_reports.length;
-    } else {
-        return 0;
-    }
-}
 // reset form data
 const resetFormData = () => {
     id.value = ''
@@ -231,6 +226,52 @@ const deleteSales = (user) => {
 }
 // end
 
+// download function
+const download = async () => {
+    try {
+        const response = await fetch('export', {
+            method: 'GET',
+        });
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(new Blob([blob]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'report.pdf');
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            Swal.fire({
+                toast: true,
+                icon: 'success',
+                position: 'top-end',
+                showConfirmButton: false,
+                title: 'PDF downloaded successfully'
+            });
+        } else {
+            Swal.fire({
+                toast: true,
+                icon: 'error',
+                position: 'top-end',
+                showConfirmButton: false,
+                title: 'Failed to download PDF'
+            });
+        }
+    } catch (error) {
+        console.log(error);
+        Swal.fire({
+            toast: true,
+            icon: 'error',
+            position: 'top-end',
+            showConfirmButton: false,
+            title: 'An error occurred while downloading PDF'
+        });
+    }
+};
+
+// 
+
 
 
 </script>
@@ -318,9 +359,17 @@ const deleteSales = (user) => {
 
                             Add New Sales
                         </button>
+                        <button @click="download" type="button"
+                            class="text-gray-900 hover:text-white border border-gray-800 hover:bg-gray-900 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2 dark:border-gray-600 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-800"><svg
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                                stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                            </svg></button>
+
                     </div>
                 </div>
-                <div class="overflow-x-auto">
+                <div id="exportable" class="overflow-x-auto">
                     <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                             <tr>
@@ -342,10 +391,10 @@ const deleteSales = (user) => {
                                     class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                                     {{ user.name }}</th>
                                 <td class="px-4 py-3">{{ user.NIP }}</td>
-                                <td class="px-4 py-3">{{ sumCustomers(user.sales_reports) }}</td>
+                                <td class="px-4 py-3">{{ user.sales_reports.length }}</td>
                                 <td class="px-4 py-3 flex items-center justify-end">
                                     <div class="flex items-center gap-3">
-                                        
+
                                         <button type="button" @click="openEditModal(user)"
                                             class="text-yellow-400 border border-yellow-400 hover:bg-yellow-400 hover:text-white focus:ring-4 focus:outline-none focus:ring-yellow-100 font-medium rounded-full text-sm p-1 text-center inline-flex items-center dark:border-yellow-200 dark:text-yellow-200 dark:hover:text-white dark:focus:ring-yellow-500 dark:hover:bg-yellow-300">
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"

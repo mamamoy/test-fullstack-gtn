@@ -31,8 +31,10 @@ Route::get('/', function () {
 });
 
 
+
 // Admin routes
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/export', [SalesReportController::class, 'exportPdf'])->name('export.pdf');
     Route::post('logout', [AdminAuthController::class, 'logout'])->name('logout');
     Route::get('/dashboard', [SalesReportController::class, 'index'])->name('dashboard');
     Route::post('/sales/store', [SalesReportController::class, 'store'])->name('sales.store');

@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\SalesReports;
+use App\Models\SellingPackets;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class SalesReportController extends Controller
 {
@@ -17,10 +19,11 @@ class SalesReportController extends Controller
         $users = User::where('isAdmin', 0)->with('sales_reports')->get();
         // dd($users);
         $salesReports = SalesReports::with(['user','sellingPackets', 'customer', 'id_images', 'home_images'])->orderBy('isApproved', 'asc')->latest('sales_report_id', 'desc')->get();
-        
+        $sellingPackets = SellingPackets::get();
         return Inertia::render('Admin/Index', [
             'users' => $users,
             'salesReports' => $salesReports,
+            'sellingPackets' => $sellingPackets
         ]);
     }
 
@@ -120,5 +123,40 @@ class SalesReportController extends Controller
         $salesReport->delete();
 
         return redirect()->route('admin.dashboard')->with('success', 'Sales report has been deleted successfully.');
+    }
+
+    public function exportPdf(){
+        $userData = User::with(['sales_reports' => function($query) {
+            $query->with('sellingPackets');
+        }])->where('isAdmin', 0)->get();
+        
+        $earningUsers = [];
+        $subtotal = 0;
+        
+        foreach($userData as $user){
+            $totalEarnings = 0;
+        
+            foreach($user->sales_reports as $report){
+                // dd($report);
+                $totalEarnings += $report->sellingPackets->packet_price;
+            }
+        
+            $earningUsers[$user->id] = $totalEarnings;
+            $subtotal += $totalEarnings;
+        }
+        $data = [
+            'user' => Auth()->user(),
+            'userData' => $userData,
+            'earningUsers' => $earningUsers,
+            'subtotal' => $subtotal,
+        ];
+        $pdf = PDF::loadView('pdf', [
+            'user' => Auth()->user(),
+            'userData' => $userData,
+            'earningUsers' => $earningUsers,
+            'subtotal' => $subtotal,
+        ]);
+    
+        return $pdf->download('report.pdf');
     }
 }

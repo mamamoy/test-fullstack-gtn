@@ -13,6 +13,7 @@ import SalesReports from './SalesReports.vue';
 
 const props = defineProps({
     users: Array,
+    sellingPackets: Array,
     salesReports: Array
 })
 </script>
